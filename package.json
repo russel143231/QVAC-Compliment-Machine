@@ -1,0 +1,26 @@
+{
+  "name": "qvac-compliment-machine",
+  "version": "1.0.0",
+  "description": "A personalized compliment, written and spoken just for you by on-device AI. No cloud call, no API key.",
+  "type": "module",
+  "main": "src/gui.js",
+  "scripts": {
+    "start": "node src/gui.js",
+    "gui": "node src/gui.js"
+  },
+  "keywords": [
+    "qvac",
+    "on-device-ai",
+    "compliment",
+    "text-to-speech",
+    "llm",
+    "offline-ai"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@qvac/sdk": "^0.19.0"
+  },
+  "engines": {
+    "node": ">=22.17"
+  }
+}
