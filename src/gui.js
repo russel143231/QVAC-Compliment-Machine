@@ -17,6 +17,35 @@ import { generateCompliment } from "./compliment.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT ? Number(process.env.PORT) : 29299;
 const PUBLIC_DIR = path.join(__dirname, "..", "public");
+// Parler-TTS (GGML) outputs 44.1 kHz mono PCM natively.
+const PARLER_SAMPLE_RATE = 44100;
+
+// textToSpeech() resolves result.buffer to a plain array of int16 PCM
+// samples, not an encoded audio file — this builds a real playable WAV
+// from it (found while testing: the naive `Buffer.from(result.audio)`
+// this app started with doesn't exist on the response shape at all).
+function pcmToWav(samples, sampleRate) {
+  const audioData = Buffer.alloc(samples.length * 2);
+  for (let i = 0; i < samples.length; i++) {
+    const value = Math.max(-32768, Math.min(32767, Math.round(samples[i] ?? 0)));
+    audioData.writeInt16LE(value, i * 2);
+  }
+  const header = Buffer.alloc(44);
+  header.write("RIFF", 0);
+  header.writeUInt32LE(36 + audioData.length, 4);
+  header.write("WAVE", 8);
+  header.write("fmt ", 12);
+  header.writeUInt32LE(16, 16);
+  header.writeUInt16LE(1, 20);
+  header.writeUInt16LE(1, 22);
+  header.writeUInt32LE(sampleRate, 24);
+  header.writeUInt32LE(sampleRate * 2, 28);
+  header.writeUInt16LE(2, 32);
+  header.writeUInt16LE(16, 34);
+  header.write("data", 36);
+  header.writeUInt32LE(audioData.length, 40);
+  return Buffer.concat([header, audioData]);
+}
 
 function serveStatic(res) {
   const html = fs.readFileSync(path.join(PUBLIC_DIR, "index.html"));
@@ -76,9 +105,10 @@ async function main() {
           res.end(JSON.stringify({ error: "Missing text" }));
           return;
         }
-        const { audio } = await textToSpeech({ modelId: ttsModelId, text });
+        const result = textToSpeech({ modelId: ttsModelId, text, inputType: "text", stream: false });
+        const samples = await result.buffer;
         res.writeHead(200, { "Content-Type": "audio/wav" });
-        res.end(Buffer.from(audio));
+        res.end(pcmToWav(samples, PARLER_SAMPLE_RATE));
       } catch (error) {
         res.writeHead(500, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: error.message }));

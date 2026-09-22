@@ -8,7 +8,7 @@ import { completion } from "@qvac/sdk";
 
 function looksUnusable(text) {
   if (!text || text.trim().length === 0) return true;
-  if (text.length > 220) return true;
+  if (text.length > 400) return true;
   const bad = ["i cannot", "i can't", "as an ai", "i'm not able"];
   const lower = text.toLowerCase();
   return bad.some((phrase) => lower.includes(phrase));
